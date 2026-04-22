@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import {
-    type Connection,
     type Edge,
     type Node,
     type OnNodesChange,
@@ -10,28 +9,28 @@ import {
     applyNodeChanges,
     applyEdgeChanges
 } from '@xyflow/react';
-import type { WorkflowNodeData } from '../types';
+import type { WorkflowNodeData, SimulationLog } from '../types';
 
-// Define the shape of our store
 interface WorkflowState {
     nodes: Node<WorkflowNodeData>[];
     edges: Edge[];
     selectedNodeId: string | null;
+    isSimulating: boolean;
+    simulationLogs: SimulationLog[];
 
-    // Use XYFlow's native handler types to satisfy the strict compiler
+
     onNodesChange: OnNodesChange<Node<WorkflowNodeData>>;
     onEdgesChange: OnEdgesChange;
     onConnect: OnConnect;
-
-    // Custom business logic
     addNode: (type: string, position: { x: number, y: number }) => void;
     updateNodeData: (id: string, data: Partial<WorkflowNodeData>) => void;
     deleteNode: (id: string) => void;
     setSelectedNodeId: (id: string | null) => void;
+    runSimulation: () => Promise<void>;
+    clearLogs: () => void;
 }
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
-    // 1. Initial State
     nodes: [
         {
             id: 'start-1',
@@ -43,7 +42,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     edges: [],
     selectedNodeId: null,
 
-    // 2. React Flow Handlers (Standard boilerplate to make drag-and-drop work)
     onNodesChange: (changes) => {
         set({ nodes: applyNodeChanges(changes, get().nodes) });
     },
@@ -54,7 +52,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         set({ edges: addEdge(connection, get().edges) });
     },
 
-    // 3. Custom Mutations
     addNode: (type, position) => {
         const id = `${type}-${Date.now()}`;
         const newNode: Node<WorkflowNodeData> = {
@@ -87,5 +84,45 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
     setSelectedNodeId: (id) => {
         set({ selectedNodeId: id });
-    }
+    },
+
+    isSimulating: false,
+
+    simulationLogs: [],
+
+    clearLogs: () => set({ simulationLogs: [] }),
+
+    runSimulation: async () => {
+        const { nodes, edges } = get();
+
+        set({ isSimulating: true, simulationLogs: [] });
+
+        try {
+            const response = await fetch('/simulate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nodes, edges }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Simulation failed');
+            }
+
+            set({
+                simulationLogs: data.executionLog,
+                isSimulating: false
+            });
+        } catch (error: any) {
+            set({
+                simulationLogs: [{
+                    timestamp: new Date().toISOString(),
+                    level: 'error',
+                    message: error.message
+                }],
+                isSimulating: false
+            });
+        }
+    },
 }));

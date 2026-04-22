@@ -38,3 +38,9 @@ export type WorkflowNodeData =
     | ApprovalNodeData
     | AutomatedNodeData
     | EndNodeData;
+
+export interface SimulationLog {
+    timestamp: string;
+    level: 'info' | 'error' | 'warning';
+    message: string;
+}
