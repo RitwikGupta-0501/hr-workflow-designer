@@ -25,6 +25,14 @@ export interface UserTemplate {
     data: Partial<WorkflowNodeData>;
 }
 
+export interface ExecutionSummary {
+    totalLogs: number;
+    tasks: number;
+    approvals: number;
+    automations: number;
+    endMessage: string;
+}
+
 interface WorkflowState {
     nodes: Node<WorkflowNodeData>[];
     edges: Edge[];
@@ -36,6 +44,7 @@ interface WorkflowState {
     invalidNodes: Record<string, string[]>;
     workflowName: string;
     userTemplates: UserTemplate[];
+    executionSummary: ExecutionSummary | null;
 
     saveNodeAsTemplate: (nodeId: string, templateName: string) => void;
     deleteTemplate: (templateId: string) => void;
@@ -77,6 +86,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         simulationLogs: [],
         workflowName: 'Untitled Workflow',
         userTemplates: [],
+        executionSummary: null,
 
         saveNodeAsTemplate: (nodeId, templateName) => {
             const node = get().nodes.find(n => n.id === nodeId);
@@ -246,7 +256,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         },
 
 
-        clearLogs: () => set({ simulationLogs: [] }),
+        clearLogs: () => set({ simulationLogs: [], executionSummary: null }),
 
         runSimulation: async () => {
             const isValid = get().validateWorkflow();
@@ -265,7 +275,7 @@ export const useWorkflowStore = create<WorkflowState>()(
             get().autoLayout();
 
             const { nodes, edges } = get();
-            set({ isSimulating: true, simulationLogs: [] });
+            set({ isSimulating: true, simulationLogs: [], executionSummary: null });
 
             try {
                 const response = await fetch('/simulate', {
@@ -280,8 +290,24 @@ export const useWorkflowStore = create<WorkflowState>()(
                     throw new Error(data.error || 'Simulation failed');
                 }
 
+                // --- NEW SUMMARY LOGIC ---
+                const endNode = nodes.find(n => n.type === 'endNode');
+                let summary = null;
+
+                // Check if the end node exists AND the summary flag is true
+                if (endNode && endNode.data.summaryFlag) {
+                    summary = {
+                        totalLogs: data.executionLog.length,
+                        tasks: nodes.filter(n => n.type === 'taskNode').length,
+                        approvals: nodes.filter(n => n.type === 'approvalNode').length,
+                        automations: nodes.filter(n => n.type === 'automatedNode').length,
+                        endMessage: endNode.data.endMessage || 'Workflow finished successfully.',
+                    };
+                }
+
                 set({
                     simulationLogs: data.executionLog,
+                    executionSummary: summary,
                     isSimulating: false
                 });
             } catch (error: any) {
