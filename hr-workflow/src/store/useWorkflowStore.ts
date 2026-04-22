@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react';
 import type { WorkflowNodeData, SimulationLog } from '../types';
 import { persist } from 'zustand/middleware';
+import dagre from 'dagre';
 
 interface HistorySnapshot {
     nodes: Node<WorkflowNodeData>[];
@@ -43,6 +44,7 @@ interface WorkflowState {
     undo: () => void;
     redo: () => void;
     validateWorkflow: () => boolean;
+    autoLayout: () => void;
 }
 
 export const useWorkflowStore = create<WorkflowState>()(
@@ -271,6 +273,57 @@ export const useWorkflowStore = create<WorkflowState>()(
                 console.error("Failed to import workflow:", error);
                 alert("Invalid workflow file.");
             }
+        },
+
+        // ... existing store methods
+
+        autoLayout: () => {
+            get().saveHistory(); // Save state so the user can 'Undo' the auto-layout!
+
+            const { nodes, edges } = get();
+
+            // 1. Initialize Dagre graph engine
+            const dagreGraph = new dagre.graphlib.Graph();
+            dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+            // Set the direction to Left-to-Right ('LR'). You can change to 'TB' (Top-Bottom) if you prefer.
+            dagreGraph.setGraph({ rankdir: 'TB', ranksep: 100, nodesep: 80 });
+
+            // 2. We need to tell Dagre roughly how big your nodes are. 
+            // Your Tailwind w-48 is 192px wide. We'll use 200x100 for breathing room.
+            const nodeWidth = 200;
+            const nodeHeight = 100;
+
+            // 3. Feed the nodes to Dagre
+            nodes.forEach((node) => {
+                dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+            });
+
+            // 4. Feed the connections to Dagre
+            edges.forEach((edge) => {
+                dagreGraph.setEdge(edge.source, edge.target);
+            });
+
+            // 5. Run the layout mathematics
+            dagre.layout(dagreGraph);
+
+            // 6. Update our React Flow nodes with the calculated coordinates
+            const layoutedNodes = nodes.map((node) => {
+                const nodeWithPosition = dagreGraph.node(node.id);
+
+                // Dagre calculates from the center, but React Flow positions from the top-left.
+                // We subtract half the width/height to center them perfectly.
+                return {
+                    ...node,
+                    position: {
+                        x: nodeWithPosition.x - nodeWidth / 2,
+                        y: nodeWithPosition.y - nodeHeight / 2,
+                    },
+                };
+            });
+
+            // 7. Update the state
+            set({ nodes: layoutedNodes });
         },
     }),
         {
