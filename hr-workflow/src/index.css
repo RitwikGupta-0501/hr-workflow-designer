@@ -1,1 +1,20 @@
 @import "tailwindcss";
+
+
+/* 1. Add a smooth transition to all edges */
+.react-flow__edge-path {
+    transition: stroke 0.2s cubic-bezier(0.4, 0, 0.2, 1), stroke-width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 2. Style the selected state (Matches the Indigo-500 of your nodes) */
+.react-flow__edge.selected .react-flow__edge-path {
+    stroke: #6366f1 !important;
+    /* Tailwind indigo-500 */
+    stroke-width: 3 !important;
+    filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.4));
+}
+
+/* Optional: Make the interactive hit-area wider so it's easier to click lines */
+.react-flow__edge-interaction {
+    stroke-width: 15px;
+}
