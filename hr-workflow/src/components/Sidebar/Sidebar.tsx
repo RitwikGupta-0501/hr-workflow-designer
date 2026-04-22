@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useWorkflowStore } from '../../store/useWorkflowStore';
+import type { WorkflowNodeData } from '../../types';
 
 export const Sidebar = () => {
     const nodes = useWorkflowStore((state) => state.nodes);
@@ -16,7 +17,7 @@ export const Sidebar = () => {
         deleteTemplate(id);
     };
 
-    const onDragStart = (event: React.DragEvent, nodeType: string, templateData?: any) => {
+    const onDragStart = (event: React.DragEvent, nodeType: string, templateData?: WorkflowNodeData) => {
         event.dataTransfer.setData('application/reactflow', nodeType);
 
         // Pass template data if we are dragging a template

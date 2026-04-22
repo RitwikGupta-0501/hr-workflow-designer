@@ -18,17 +18,17 @@ export interface TaskNodeData extends BaseNodeData {
 
 export interface ApprovalNodeData extends BaseNodeData {
     role: 'Manager' | 'HRBP' | 'Director' | '';
-    autoApproveThreshold?: number;
+    threshold?: number;
 }
 
 export interface AutomatedNodeData extends BaseNodeData {
     actionId: string;
-    actionParameters?: Record<string, any>;
+    actionParams?: Record<string, string>;
 }
 
 export interface EndNodeData extends BaseNodeData {
-    message?: string;
-    isSummary?: boolean;
+    endMessage?: string;
+    summaryFlag?: boolean;
 }
 
 // A discriminated union to strongly type the node payloads across the app

@@ -1,19 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useWorkflowStore } from '../../store/useWorkflowStore';
+import type { Node } from '@xyflow/react';
+import type { WorkflowNodeData } from '../../types';
 
-const KeyValueEditor = ({ label, pairs = [], onChange }: any) => {
+interface KeyValuePair {
+    key: string;
+    value: string;
+}
+
+interface KeyValueEditorProps {
+    label: string;
+    pairs: KeyValuePair[];
+    onChange: (pairs: KeyValuePair[]) => void;
+}
+
+interface NodeFieldProps {
+    node: Node<WorkflowNodeData>;
+    updateData: (id: string, data: Partial<WorkflowNodeData>) => void;
+}
+
+interface AutomationAction {
+    id: string;
+    name: string;
+    requiredParams: string[];
+}
+
+const KeyValueEditor = ({ label, pairs = [], onChange }: KeyValueEditorProps) => {
     const addPair = () => onChange([...pairs, { key: '', value: '' }]);
     const updatePair = (index: number, field: 'key' | 'value', val: string) => {
         const newPairs = [...pairs];
         newPairs[index][field] = val;
         onChange(newPairs);
     };
-    const removePair = (index: number) => onChange(pairs.filter((_: any, i: number) => i !== index));
+    const removePair = (index: number) => onChange(pairs.filter((_: KeyValuePair, i: number) => i !== index));
 
     return (
         <div className="space-y-2">
             <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">{label}</label>
-            {pairs.map((pair: any, i: number) => (
+            {pairs.map((pair: KeyValuePair, i: number) => (
                 <div key={i} className="flex gap-2 items-center">
                     <input
                         type="text"
@@ -44,99 +68,106 @@ const KeyValueEditor = ({ label, pairs = [], onChange }: any) => {
 
 // --- Node Specific Forms ---
 
-const StartFields = ({ node, updateData }: any) => (
+const StartFields = ({ node, updateData }: NodeFieldProps) => (
     <div className="space-y-4 pt-4 border-t border-slate-100">
         <KeyValueEditor
             label="Metadata (Key-Value Pairs)"
-            pairs={node.data.metadata || []}
-            onChange={(val: any) => updateData(node.id, { metadata: val })}
+            pairs={((node.data as unknown as Record<string, unknown>).metadata as KeyValuePair[]) || []}
+            onChange={(val: KeyValuePair[]) => updateData(node.id, { metadata: val as unknown as Record<string, string> })}
         />
     </div>
 );
 
-const TaskFields = ({ node, updateData }: any) => (
-    <div className="space-y-4 pt-4 border-t border-slate-100">
-        <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Description</label>
-            <textarea
-                placeholder="Enter task details..."
-                value={node.data.description || ''}
-                onChange={(e) => updateData(node.id, { description: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 resize-none h-20"
-            />
-        </div>
-        <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Assignee</label>
-            <input
-                type="text"
-                placeholder="e.g. John Doe"
-                value={node.data.assignee || ''}
-                onChange={(e) => updateData(node.id, { assignee: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
-        </div>
-        <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Due Date</label>
-            <input
-                type="date"
-                value={node.data.dueDate || ''}
-                onChange={(e) => updateData(node.id, { dueDate: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
-        </div>
+const TaskFields = ({ node, updateData }: NodeFieldProps) => {
+    const data = node.data as import('../../types').TaskNodeData;
+    return (
+        <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Description</label>
+                <textarea
+                    placeholder="Enter task details..."
+                    value={data.description || ''}
+                    onChange={(e) => updateData(node.id, { description: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 resize-none h-20"
+                />
+            </div>
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Assignee</label>
+                <input
+                    type="text"
+                    placeholder="e.g. John Doe"
+                    value={data.assignee || ''}
+                    onChange={(e) => updateData(node.id, { assignee: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Due Date</label>
+                <input
+                    type="date"
+                    value={data.dueDate || ''}
+                    onChange={(e) => updateData(node.id, { dueDate: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
 
-        <KeyValueEditor
-            label="Custom Fields"
-            pairs={node.data.customFields || []}
-            onChange={(val: any) => updateData(node.id, { customFields: val })}
-        />
-    </div>
-);
-
-const ApprovalFields = ({ node, updateData }: any) => (
-    <div className="space-y-4 pt-4 border-t border-slate-100">
-        <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Approval Role</label>
-            <select
-                value={node.data.role || ''}
-                onChange={(e) => updateData(node.id, { role: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500"
-            >
-                <option value="">Select Role</option>
-                <option value="Manager">Manager</option>
-                <option value="HRBP">HRBP</option>
-                <option value="Director">Director</option>
-            </select>
-        </div>
-        <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Auto-Approve Threshold ($)</label>
-            <input
-                type="number"
-                placeholder="e.g. 500"
-                value={node.data.threshold || ''}
-                onChange={(e) => updateData(node.id, { threshold: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500"
+            <KeyValueEditor
+                label="Custom Fields"
+                pairs={((data as unknown as Record<string, unknown>).customFields as KeyValuePair[]) || []}
+                onChange={(val: KeyValuePair[]) => updateData(node.id, { customFields: val as unknown as Record<string, string> })}
             />
         </div>
-    </div>
-);
+    );
+};
 
-const AutomatedFields = ({ node, updateData }: any) => {
-    const [actions, setActions] = React.useState<any[]>([]);
+const ApprovalFields = ({ node, updateData }: NodeFieldProps) => {
+    const data = node.data as import('../../types').ApprovalNodeData;
+    return (
+        <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Approval Role</label>
+                <select
+                    value={data.role || ''}
+                    onChange={(e) => updateData(node.id, { role: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                    <option value="">Select Role</option>
+                    <option value="Manager">Manager</option>
+                    <option value="HRBP">HRBP</option>
+                    <option value="Director">Director</option>
+                </select>
+            </div>
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Auto-Approve Threshold ($)</label>
+                <input
+                    type="number"
+                    placeholder="e.g. 500"
+                    value={data.threshold || ''}
+                    onChange={(e) => updateData(node.id, { threshold: Number(e.target.value) })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500"
+                />
+            </div>
+        </div>
+    );
+};
+
+const AutomatedFields = ({ node, updateData }: NodeFieldProps) => {
+    const data = node.data as import('../../types').AutomatedNodeData;
+    const [actions, setActions] = React.useState<AutomationAction[]>([]);
     const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
         fetch('/automations')
             .then((res) => res.json())
-            .then((data) => {
-                setActions(data);
+            .then((resData) => {
+                setActions(resData);
                 setLoading(false);
             })
             .catch(() => setLoading(false));
     }, []);
 
-    const selectedAction = actions.find(a => a.id === node.data.actionId);
-    const actionParams = node.data.actionParams || {};
+    const selectedAction = actions.find(a => a.id === data.actionId);
+    const actionParams = data.actionParams || {};
 
     return (
         <div className="space-y-4 pt-4 border-t border-slate-100">
@@ -148,7 +179,7 @@ const AutomatedFields = ({ node, updateData }: any) => {
                     <div className="animate-pulse h-10 bg-slate-100 rounded-lg" />
                 ) : (
                     <select
-                        value={node.data.actionId || ''}
+                        value={data.actionId || ''}
                         // Reset params when action changes
                         onChange={(e) => updateData(node.id, { actionId: e.target.value, actionParams: {} })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
@@ -184,31 +215,34 @@ const AutomatedFields = ({ node, updateData }: any) => {
     );
 };
 
-const EndFields = ({ node, updateData }: any) => (
-    <div className="space-y-4 pt-4 border-t border-slate-100">
-        <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">End Message</label>
-            <textarea
-                placeholder="Message to display on completion..."
-                value={node.data.endMessage || ''}
-                onChange={(e) => updateData(node.id, { endMessage: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 resize-none h-20"
-            />
+const EndFields = ({ node, updateData }: NodeFieldProps) => {
+    const data = node.data as import('../../types').EndNodeData;
+    return (
+        <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">End Message</label>
+                <textarea
+                    placeholder="Message to display on completion..."
+                    value={data.endMessage || ''}
+                    onChange={(e) => updateData(node.id, { endMessage: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 resize-none h-20"
+                />
+            </div>
+            <div className="flex items-center gap-2 mt-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <input
+                    type="checkbox"
+                    id="summaryFlag"
+                    checked={data.summaryFlag || false}
+                    onChange={(e) => updateData(node.id, { summaryFlag: e.target.checked })}
+                    className="w-4 h-4 text-rose-600 rounded focus:ring-rose-500 cursor-pointer"
+                />
+                <label htmlFor="summaryFlag" className="text-sm font-semibold text-slate-700 cursor-pointer select-none">
+                    Generate Execution Summary
+                </label>
+            </div>
         </div>
-        <div className="flex items-center gap-2 mt-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
-            <input
-                type="checkbox"
-                id="summaryFlag"
-                checked={node.data.summaryFlag || false}
-                onChange={(e) => updateData(node.id, { summaryFlag: e.target.checked })}
-                className="w-4 h-4 text-rose-600 rounded focus:ring-rose-500 cursor-pointer"
-            />
-            <label htmlFor="summaryFlag" className="text-sm font-semibold text-slate-700 cursor-pointer select-none">
-                Generate Execution Summary
-            </label>
-        </div>
-    </div>
-);
+    );
+};
 
 export const InspectorPanel = () => {
     const {
@@ -219,19 +253,19 @@ export const InspectorPanel = () => {
         saveNodeAsTemplate, invalidNodes
     } = useWorkflowStore();
 
-    // Track a unified active item
-    const [activeItem, setActiveItem] = useState<{ type: 'node' | 'edge', data: any } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [templateName, setTemplateName] = useState('');
 
-    useEffect(() => {
+    const activeItem = React.useMemo(() => {
         if (selectedNodeId) {
             const node = nodes.find((n) => n.id === selectedNodeId);
-            if (node) setActiveItem({ type: 'node', data: node });
-        } else if (selectedEdgeId) {
-            const edge = edges.find((e) => e.id === selectedEdgeId);
-            if (edge) setActiveItem({ type: 'edge', data: edge });
+            return node ? { type: 'node' as const, data: node } : null;
         }
+        if (selectedEdgeId) {
+            const edge = edges.find((e) => e.id === selectedEdgeId);
+            return edge ? { type: 'edge' as const, data: edge } : null;
+        }
+        return null;
     }, [selectedNodeId, selectedEdgeId, nodes, edges]);
 
     const isOpen = !!selectedNodeId || !!selectedEdgeId;
@@ -338,7 +372,7 @@ export const InspectorPanel = () => {
                             </label>
                             <input
                                 type="text"
-                                value={activeItem.data.label || ''}
+                                value={(activeItem.data.label as string) || ''}
                                 onChange={(e) => updateEdgeLabel(activeItem.data.id, e.target.value)}
                                 placeholder="e.g. Approved, Rejected"
                                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"

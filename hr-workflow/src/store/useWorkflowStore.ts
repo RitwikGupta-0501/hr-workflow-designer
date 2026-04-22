@@ -342,12 +342,13 @@ export const useWorkflowStore = create<WorkflowState>()(
                     executionSummary: summary,
                     isSimulating: false
                 });
-            } catch (error: any) {
+            } catch (error) {
+                const msg = error instanceof Error ? error.message : String(error);
                 set({
                     simulationLogs: [{
                         timestamp: new Date().toISOString(),
                         level: 'error',
-                        message: error.message
+                        message: msg
                     }],
                     isSimulating: false
                 });

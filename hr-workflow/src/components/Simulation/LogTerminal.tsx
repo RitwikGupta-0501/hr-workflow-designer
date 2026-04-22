@@ -1,5 +1,6 @@
 import { useWorkflowStore } from '../../store/useWorkflowStore';
 import { useEffect, useRef } from 'react';
+import type { SimulationLog } from '../../types';
 
 export const LogTerminal = () => {
     const { simulationLogs, isSimulating, clearLogs, executionSummary } = useWorkflowStore();
@@ -24,7 +25,7 @@ export const LogTerminal = () => {
 
             {/* Log Stream */}
             <div className="p-4 overflow-y-auto text-sm space-y-2">
-                {simulationLogs.map((log: any, i: number) => (
+                {simulationLogs.map((log: SimulationLog, i: number) => (
                     <div key={i} className={`flex gap-3 ${log.level === 'error' ? 'text-rose-400' : 'text-slate-300'}`}>
                         <span className="text-slate-500 shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
                         <span>{log.message}</span>

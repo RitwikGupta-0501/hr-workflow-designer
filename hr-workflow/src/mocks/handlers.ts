@@ -21,7 +21,7 @@ export const handlers = [
         nodes: { id: string; type: string; data: WorkflowNodeData }[];
         edges: { id: string; source: string; target: string }[]
       };
-    } catch (error) {
+    } catch {
       return HttpResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
     }
 
