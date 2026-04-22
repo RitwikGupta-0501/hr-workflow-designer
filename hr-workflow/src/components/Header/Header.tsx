@@ -6,7 +6,9 @@ export const Header = () => {
         redo,
         past,
         future,
-        autoLayout
+        autoLayout,
+        workflowName,
+        setWorkflowName
     } = useWorkflowStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,6 +30,17 @@ export const Header = () => {
 
     return (
         <header className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex gap-3 bg-white/80 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-slate-200">
+            {/* Workflow Name Input */}
+            <div className="flex items-center px-2">
+                <input
+                    type="text"
+                    value={workflowName}
+                    onChange={(e) => setWorkflowName(e.target.value)}
+                    className="bg-transparent font-bold text-slate-800 outline-none w-40 focus:border-b-2 focus:border-indigo-500 transition-all placeholder-slate-400"
+                    placeholder="Name your workflow..."
+                />
+            </div>
+
             {/* History Controls */}
             <div className="flex gap-1">
                 <button

@@ -27,6 +27,7 @@ interface WorkflowState {
     past: HistorySnapshot[];
     future: HistorySnapshot[];
     invalidNodes: Record<string, string[]>;
+    workflowName: string;
 
 
     onNodesChange: OnNodesChange<Node<WorkflowNodeData>>;
@@ -45,6 +46,7 @@ interface WorkflowState {
     redo: () => void;
     validateWorkflow: () => boolean;
     autoLayout: () => void;
+    setWorkflowName: (name: string) => void;
 }
 
 export const useWorkflowStore = create<WorkflowState>()(
@@ -64,6 +66,11 @@ export const useWorkflowStore = create<WorkflowState>()(
         invalidNodes: {},
         isSimulating: false,
         simulationLogs: [],
+        workflowName: 'Untitled Workflow',
+
+        setWorkflowName: (name: string) => {
+            set({ workflowName: name });
+        },
 
         saveHistory: () => {
             const { nodes, edges, past } = get();
@@ -247,14 +254,15 @@ export const useWorkflowStore = create<WorkflowState>()(
         },
 
         exportWorkflow: () => {
-            const { nodes, edges } = get();
+            const { nodes, edges, workflowName } = get();
             const exportData = JSON.stringify({ nodes, edges }, null, 2);
 
             const blob = new Blob([exportData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
+            const safeName = workflowName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
             link.href = url;
-            link.download = `hr-workflow-${new Date().toISOString().split('T')[0]}.json`;
+            link.download = `${safeName || 'workflow'}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -266,6 +274,7 @@ export const useWorkflowStore = create<WorkflowState>()(
                 const data = JSON.parse(jsonString);
                 if (data.nodes && data.edges) {
                     set({
+                        workflowName: data.workflowName || 'Imported Workflow',
                         nodes: data.nodes,
                         edges: data.edges,
                         selectedNodeId: null,
