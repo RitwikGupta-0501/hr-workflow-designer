@@ -169,7 +169,17 @@ export const useWorkflowStore = create<WorkflowState>()(
         },
 
         onConnect: (connection) => {
-            set({ edges: addEdge(connection, get().edges) });
+            get().saveHistory();
+            const newEdge = {
+                ...connection,
+                label: 'Transition',
+                labelStyle: { fill: '#475569', fontWeight: 700, fontSize: 12 },
+                labelBgStyle: { fill: '#f8fafc', color: '#f8fafc' },
+                labelBgPadding: [8, 4] as [number, number],
+                labelBgBorderRadius: 4,
+            };
+            set({ edges: addEdge(newEdge, get().edges) });
+
             if (Object.keys(get().invalidNodes).length > 0) {
                 get().validateWorkflow();
             }
