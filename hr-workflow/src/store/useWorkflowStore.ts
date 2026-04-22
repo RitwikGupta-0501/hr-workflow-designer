@@ -98,9 +98,19 @@ export const useWorkflowStore = create<WorkflowState>()(
         updateEdgeLabel: (id, label) => {
             get().saveHistory();
             set({
-                edges: get().edges.map((edge) =>
-                    edge.id === id ? { ...edge, label } : edge
-                )
+                edges: get().edges.map((edge) => {
+                    if (edge.id === id) {
+                        return {
+                            ...edge,
+                            label,
+                            labelStyle: edge.labelStyle || { fill: '#475569', fontWeight: 700, fontSize: 12 },
+                            labelBgStyle: edge.labelBgStyle || { fill: '#f8fafc', color: '#f8fafc' },
+                            labelBgPadding: edge.labelBgPadding || [8, 4],
+                            labelBgBorderRadius: edge.labelBgBorderRadius || 4,
+                        };
+                    }
+                    return edge;
+                })
             });
         },
 

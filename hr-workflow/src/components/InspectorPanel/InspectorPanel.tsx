@@ -210,7 +210,7 @@ const EndFields = ({ node, updateData }: any) => (
     </div>
 );
 
-export const NodeEditor = () => {
+export const InspectorPanel = () => {
     const {
         nodes, edges, selectedNodeId, selectedEdgeId,
         updateNodeData, updateEdgeLabel,

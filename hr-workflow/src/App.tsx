@@ -1,6 +1,6 @@
 import { WorkflowCanvas } from './components/Canvas/WorkflowCanvas';
 import { Sidebar } from './components/Sidebar/Sidebar';
-import { NodeEditor } from './components/NodeEditor/NodeEditor';
+import { InspectorPanel } from './components/InspectorPanel/InspectorPanel';
 import { Header } from './components/Header/Header';
 import { LogTerminal } from './components/Simulation/LogTerminal';
 
@@ -13,7 +13,7 @@ function App() {
         <WorkflowCanvas />
         <LogTerminal /> {/* Add this! */}
       </main>
-      <NodeEditor />
+      <InspectorPanel />
     </div>
   );
 }
