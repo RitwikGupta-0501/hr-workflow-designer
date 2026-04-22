@@ -25,7 +25,7 @@ interface WorkflowState {
     simulationLogs: SimulationLog[];
     past: HistorySnapshot[];
     future: HistorySnapshot[];
-    invalidNodes: string[];
+    invalidNodes: Record<string, string[]>;
 
 
     onNodesChange: OnNodesChange<Node<WorkflowNodeData>>;
@@ -59,7 +59,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         selectedNodeId: null,
         past: [],
         future: [],
-        invalidNodes: [],
+        invalidNodes: {},
         isSimulating: false,
         simulationLogs: [],
 
@@ -103,55 +103,67 @@ export const useWorkflowStore = create<WorkflowState>()(
 
         validateWorkflow: () => {
             const { nodes, edges } = get();
-            const invalidIds: string[] = [];
+            const errors: Record<string, string[]> = {};
 
             nodes.forEach(node => {
-                let isValid = true;
+                const nodeErrors: string[] = [];
 
                 // 1. Connection Checks
                 const hasIncoming = edges.some(e => e.target === node.id);
                 const hasOutgoing = edges.some(e => e.source === node.id);
 
-                if (node.type === 'startNode' && !hasOutgoing) isValid = false;
-                if (node.type === 'endNode' && !hasIncoming) isValid = false;
-                if (['taskNode', 'approvalNode', 'automatedNode'].includes(node.type || '') && (!hasIncoming || !hasOutgoing)) isValid = false;
+                if (node.type === 'startNode' && !hasOutgoing) nodeErrors.push('Missing outgoing connection.');
+                if (node.type === 'endNode' && !hasIncoming) nodeErrors.push('Missing incoming connection.');
+                if (['taskNode', 'approvalNode', 'automatedNode'].includes(node.type || '') && (!hasIncoming || !hasOutgoing)) {
+                    nodeErrors.push('Must be connected on both sides.');
+                }
 
                 // 2. Data Checks
-                if (node.type === 'taskNode' && (!node.data.assignee || !node.data.dueDate)) isValid = false;
-                if (node.type === 'approvalNode' && !node.data.role) isValid = false;
-                if (node.type === 'automatedNode' && !node.data.actionId) isValid = false;
+                if (node.type === 'taskNode') {
+                    if (!node.data.assignee) nodeErrors.push('Assignee is required.');
+                    if (!node.data.dueDate) nodeErrors.push('Due date is required.');
+                }
+                if (node.type === 'approvalNode' && !node.data.role) nodeErrors.push('Approval role is required.');
+                if (node.type === 'automatedNode' && !node.data.actionId) nodeErrors.push('Automation action must be selected.');
 
-                if (!isValid) invalidIds.push(node.id);
+                if (nodeErrors.length > 0) {
+                    errors[node.id] = nodeErrors;
+                }
             });
 
-            set({ invalidNodes: invalidIds });
-            return invalidIds.length === 0;
+            set({ invalidNodes: errors });
+            return Object.keys(errors).length === 0;
         },
 
         onNodesChange: (changes) => {
-            set({
-                nodes: applyNodeChanges(changes, get().nodes),
-                invalidNodes: []
-            });
+            set({ nodes: applyNodeChanges(changes, get().nodes) });
+            if (Object.keys(get().invalidNodes).length > 0) {
+                get().validateWorkflow();
+            }
         },
 
         onEdgesChange: (changes) => {
-            set({
-                edges: applyEdgeChanges(changes, get().edges),
-                invalidNodes: []
-            });
+            set({ edges: applyEdgeChanges(changes, get().edges) });
+            if (Object.keys(get().invalidNodes).length > 0) {
+                get().validateWorkflow();
+            }
         },
 
         updateNodeData: (id, newData) => {
             get().saveHistory();
             set({
                 nodes: get().nodes.map((node) => node.id === id ? { ...node, data: { ...node.data, ...newData } } : node),
-                invalidNodes: []
             });
+            if (Object.keys(get().invalidNodes).length > 0) {
+                get().validateWorkflow();
+            }
         },
 
         onConnect: (connection) => {
             set({ edges: addEdge(connection, get().edges) });
+            if (Object.keys(get().invalidNodes).length > 0) {
+                get().validateWorkflow();
+            }
         },
 
         addNode: (type, position) => {

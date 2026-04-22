@@ -99,10 +99,8 @@ const AutomatedFields = ({ node, updateData }: any) => {
 };
 
 export const NodeEditor = () => {
-    const { nodes, selectedNodeId, updateNodeData, setSelectedNodeId, deleteNode } = useWorkflowStore();
+    const { nodes, selectedNodeId, updateNodeData, setSelectedNodeId, deleteNode, invalidNodes } = useWorkflowStore();
 
-    // This state "holds onto" the last selected node data so the form 
-    // doesn't look empty while it's sliding away.
     const [activeNode, setActiveNode] = useState<any>(null);
 
     useEffect(() => {
@@ -110,11 +108,12 @@ export const NodeEditor = () => {
         if (selectedNode) {
             setActiveNode(selectedNode);
         }
-        // If selectedNodeId becomes null, we DON'T reset activeNode immediately.
-        // We let the animation finish first.
     }, [selectedNodeId, nodes]);
-
     const isOpen = !!selectedNodeId;
+
+    if (!activeNode) return null;
+    const nodeErrors = invalidNodes[activeNode.id];
+
 
     return (
         <aside
@@ -132,6 +131,20 @@ export const NodeEditor = () => {
             </div>
 
             <div className="p-6 space-y-6 overflow-y-auto h-[calc(100%-60px)]">
+                {/* --- THE ERROR BANNER --- */}
+                {nodeErrors && nodeErrors.length > 0 && (
+                    <div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl animate-fade-in">
+                        <div className="flex items-center gap-2 text-rose-700 font-bold text-sm mb-1">
+                            <span>⚠️</span> Validation Errors
+                        </div>
+                        <ul className="list-disc list-inside text-xs text-rose-600 space-y-1">
+                            {nodeErrors.map((error, index) => (
+                                <li key={index}>{error}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
                 {/* We use activeNode here so the inputs stay populated during the slide-out */}
                 {activeNode && (
                     <div>

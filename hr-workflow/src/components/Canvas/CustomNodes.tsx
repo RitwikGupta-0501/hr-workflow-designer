@@ -3,11 +3,10 @@ import { useWorkflowStore } from '../../store/useWorkflowStore';
 
 
 const BaseNode = ({ id, title, color, children, hasTarget, hasSource, selected }: any) => {
-    const isInvalid = useWorkflowStore(state => state.invalidNodes.includes(id));
-
+    const isInvalid = useWorkflowStore(state => !!state.invalidNodes[id]);
     return (
         <div className={`bg-white rounded-xl w-48 overflow-hidden transition-all duration-200 border-2 ${isInvalid
-            ? 'border-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,0.15)] animate-pulse' // The error state
+            ? 'border-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,0.15)] animate-pulse'
             : selected
                 ? 'border-indigo-500 shadow-[0_0_0_4px_rgba(99,102,241,0.15)] scale-[1.02]'
                 : 'border-slate-200 shadow-md hover:border-slate-300'
