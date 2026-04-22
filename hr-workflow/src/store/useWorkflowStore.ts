@@ -29,6 +29,8 @@ interface WorkflowState {
     setSelectedNodeId: (id: string | null) => void;
     runSimulation: () => Promise<void>;
     clearLogs: () => void;
+    exportWorkflow: () => void;
+    importWorkflow: (jsonString: string) => void;
 }
 
 export const useWorkflowStore = create<WorkflowState>()(
@@ -126,7 +128,41 @@ export const useWorkflowStore = create<WorkflowState>()(
                     isSimulating: false
                 });
             }
-        }
+        },
+        exportWorkflow: () => {
+            const { nodes, edges } = get();
+            const exportData = JSON.stringify({ nodes, edges }, null, 2);
+
+            // Create a blob and trigger a download
+            const blob = new Blob([exportData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `hr-workflow-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        },
+
+        importWorkflow: (jsonString: string) => {
+            try {
+                const data = JSON.parse(jsonString);
+                if (data.nodes && data.edges) {
+                    set({
+                        nodes: data.nodes,
+                        edges: data.edges,
+                        selectedNodeId: null,
+                        simulationLogs: [] // Reset logs on new import
+                    });
+                } else {
+                    throw new Error("Invalid file structure");
+                }
+            } catch (error) {
+                console.error("Failed to import workflow:", error);
+                alert("Invalid workflow file.");
+            }
+        },
     }),
         {
             name: 'hr-workflow-storage', // 3. Unique name for the key in LocalStorage
