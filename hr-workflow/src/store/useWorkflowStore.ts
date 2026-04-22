@@ -12,12 +12,19 @@ import {
 import type { WorkflowNodeData, SimulationLog } from '../types';
 import { persist } from 'zustand/middleware';
 
+interface HistorySnapshot {
+    nodes: Node<WorkflowNodeData>[];
+    edges: Edge[];
+}
+
 interface WorkflowState {
     nodes: Node<WorkflowNodeData>[];
     edges: Edge[];
     selectedNodeId: string | null;
     isSimulating: boolean;
     simulationLogs: SimulationLog[];
+    past: HistorySnapshot[];
+    future: HistorySnapshot[];
 
 
     onNodesChange: OnNodesChange<Node<WorkflowNodeData>>;
@@ -31,6 +38,9 @@ interface WorkflowState {
     clearLogs: () => void;
     exportWorkflow: () => void;
     importWorkflow: (jsonString: string) => void;
+    saveHistory: () => void;
+    undo: () => void;
+    redo: () => void;
 }
 
 export const useWorkflowStore = create<WorkflowState>()(
@@ -45,6 +55,46 @@ export const useWorkflowStore = create<WorkflowState>()(
         ],
         edges: [],
         selectedNodeId: null,
+        past: [],
+        future: [],
+
+        saveHistory: () => {
+            const { nodes, edges, past } = get();
+            const newPast = [...past, { nodes, edges }].slice(-50);
+            set({ past: newPast, future: [] });
+        },
+
+        undo: () => {
+            const { past, future, nodes, edges } = get();
+            if (past.length === 0) return;
+
+            const previous = past[past.length - 1];
+            const newPast = past.slice(0, past.length - 1);
+
+            set({
+                past: newPast,
+                future: [{ nodes, edges }, ...future],
+                nodes: previous.nodes,
+                edges: previous.edges,
+                selectedNodeId: null
+            });
+        },
+
+        redo: () => {
+            const { past, future, nodes, edges } = get();
+            if (future.length === 0) return;
+
+            const next = future[0];
+            const newFuture = future.slice(1);
+
+            set({
+                past: [...past, { nodes, edges }],
+                future: newFuture,
+                nodes: next.nodes,
+                edges: next.edges,
+                selectedNodeId: null
+            });
+        },
 
         onNodesChange: (changes) => {
             set({ nodes: applyNodeChanges(changes, get().nodes) });
@@ -57,6 +107,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         },
 
         addNode: (type, position) => {
+            get().saveHistory();
             const id = `${type}-${Date.now()}`;
             const newNode: Node<WorkflowNodeData> = {
                 id,
@@ -68,6 +119,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         },
 
         updateNodeData: (id, newData) => {
+            get().saveHistory();
             set({
                 nodes: get().nodes.map((node) => {
                     if (node.id === id) {
@@ -79,6 +131,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         },
 
         deleteNode: (id) => {
+            get().saveHistory();
             set({
                 nodes: get().nodes.filter((node) => node.id !== id),
                 edges: get().edges.filter((edge) => edge.source !== id && edge.target !== id),
@@ -133,7 +186,6 @@ export const useWorkflowStore = create<WorkflowState>()(
             const { nodes, edges } = get();
             const exportData = JSON.stringify({ nodes, edges }, null, 2);
 
-            // Create a blob and trigger a download
             const blob = new Blob([exportData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -153,7 +205,7 @@ export const useWorkflowStore = create<WorkflowState>()(
                         nodes: data.nodes,
                         edges: data.edges,
                         selectedNodeId: null,
-                        simulationLogs: [] // Reset logs on new import
+                        simulationLogs: []
                     });
                 } else {
                     throw new Error("Invalid file structure");
@@ -165,6 +217,6 @@ export const useWorkflowStore = create<WorkflowState>()(
         },
     }),
         {
-            name: 'hr-workflow-storage', // 3. Unique name for the key in LocalStorage
+            name: 'hr-workflow-storage',
         }
     ));

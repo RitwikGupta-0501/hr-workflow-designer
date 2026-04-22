@@ -2,8 +2,14 @@ import { useRef } from 'react';
 import { useWorkflowStore } from '../../store/useWorkflowStore';
 
 export const Header = () => {
-    const { runSimulation, isSimulating, exportWorkflow, importWorkflow } = useWorkflowStore();
+    const { runSimulation, isSimulating, exportWorkflow, importWorkflow, undo,
+        redo,
+        past,
+        future } = useWorkflowStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const canUndo = past.length > 0;
+    const canRedo = future.length > 0;
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -15,14 +21,40 @@ export const Header = () => {
             };
             reader.readAsText(file);
         }
-        // Reset input so the same file can be uploaded again if needed
         if (event.target) event.target.value = '';
     };
 
     return (
         <header className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex gap-3 bg-white/80 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-slate-200">
+            {/* History Controls */}
+            <div className="flex gap-1">
+                <button
+                    onClick={undo}
+                    disabled={!canUndo}
+                    className={`px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-1 transition-colors ${canUndo
+                        ? 'text-slate-700 hover:bg-slate-100'
+                        : 'text-slate-300 cursor-not-allowed'
+                        }`}
+                    title="Undo (Ctrl+Z)"
+                >
+                    <span>↩</span>
+                </button>
 
-            {/* Hidden file input */}
+                <button
+                    onClick={redo}
+                    disabled={!canRedo}
+                    className={`px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-1 transition-colors ${canRedo
+                        ? 'text-slate-700 hover:bg-slate-100'
+                        : 'text-slate-300 cursor-not-allowed'
+                        }`}
+                    title="Redo (Ctrl+Y)"
+                >
+                    <span>↪</span>
+                </button>
+            </div>
+
+            <div className="w-px h-8 bg-slate-200 mx-1 self-center" />
+
             <input
                 type="file"
                 accept=".json"
@@ -51,12 +83,11 @@ export const Header = () => {
                 onClick={runSimulation}
                 disabled={isSimulating}
                 className={`px-6 py-2 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 ${isSimulating
-                        ? 'bg-slate-400 cursor-not-allowed text-white'
-                        : 'bg-indigo-600 hover:bg-indigo-700 text-white active:scale-95'
+                    ? 'bg-slate-400 cursor-not-allowed text-white'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white active:scale-95'
                     }`}
             >
                 {isSimulating ? <span className="animate-spin">⏳</span> : <span>▶</span>}
-                {isSimulating ? 'Simulating...' : 'Run Simulation'}
             </button>
         </header>
     );
