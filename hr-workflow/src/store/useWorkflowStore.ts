@@ -25,6 +25,7 @@ interface WorkflowState {
     simulationLogs: SimulationLog[];
     past: HistorySnapshot[];
     future: HistorySnapshot[];
+    invalidNodes: string[];
 
 
     onNodesChange: OnNodesChange<Node<WorkflowNodeData>>;
@@ -41,6 +42,7 @@ interface WorkflowState {
     saveHistory: () => void;
     undo: () => void;
     redo: () => void;
+    validateWorkflow: () => boolean;
 }
 
 export const useWorkflowStore = create<WorkflowState>()(
@@ -57,6 +59,9 @@ export const useWorkflowStore = create<WorkflowState>()(
         selectedNodeId: null,
         past: [],
         future: [],
+        invalidNodes: [],
+        isSimulating: false,
+        simulationLogs: [],
 
         saveHistory: () => {
             const { nodes, edges, past } = get();
@@ -96,12 +101,55 @@ export const useWorkflowStore = create<WorkflowState>()(
             });
         },
 
+        validateWorkflow: () => {
+            const { nodes, edges } = get();
+            const invalidIds: string[] = [];
+
+            nodes.forEach(node => {
+                let isValid = true;
+
+                // 1. Connection Checks
+                const hasIncoming = edges.some(e => e.target === node.id);
+                const hasOutgoing = edges.some(e => e.source === node.id);
+
+                if (node.type === 'startNode' && !hasOutgoing) isValid = false;
+                if (node.type === 'endNode' && !hasIncoming) isValid = false;
+                if (['taskNode', 'approvalNode', 'automatedNode'].includes(node.type || '') && (!hasIncoming || !hasOutgoing)) isValid = false;
+
+                // 2. Data Checks
+                if (node.type === 'taskNode' && (!node.data.assignee || !node.data.dueDate)) isValid = false;
+                if (node.type === 'approvalNode' && !node.data.role) isValid = false;
+                if (node.type === 'automatedNode' && !node.data.actionId) isValid = false;
+
+                if (!isValid) invalidIds.push(node.id);
+            });
+
+            set({ invalidNodes: invalidIds });
+            return invalidIds.length === 0;
+        },
+
         onNodesChange: (changes) => {
-            set({ nodes: applyNodeChanges(changes, get().nodes) });
+            set({
+                nodes: applyNodeChanges(changes, get().nodes),
+                invalidNodes: []
+            });
         },
+
         onEdgesChange: (changes) => {
-            set({ edges: applyEdgeChanges(changes, get().edges) });
+            set({
+                edges: applyEdgeChanges(changes, get().edges),
+                invalidNodes: []
+            });
         },
+
+        updateNodeData: (id, newData) => {
+            get().saveHistory();
+            set({
+                nodes: get().nodes.map((node) => node.id === id ? { ...node, data: { ...node.data, ...newData } } : node),
+                invalidNodes: []
+            });
+        },
+
         onConnect: (connection) => {
             set({ edges: addEdge(connection, get().edges) });
         },
@@ -118,18 +166,6 @@ export const useWorkflowStore = create<WorkflowState>()(
             set({ nodes: [...get().nodes, newNode] });
         },
 
-        updateNodeData: (id, newData) => {
-            get().saveHistory();
-            set({
-                nodes: get().nodes.map((node) => {
-                    if (node.id === id) {
-                        return { ...node, data: { ...node.data, ...newData } };
-                    }
-                    return node;
-                })
-            });
-        },
-
         deleteNode: (id) => {
             get().saveHistory();
             set({
@@ -143,15 +179,24 @@ export const useWorkflowStore = create<WorkflowState>()(
             set({ selectedNodeId: id });
         },
 
-        isSimulating: false,
-
-        simulationLogs: [],
 
         clearLogs: () => set({ simulationLogs: [] }),
 
         runSimulation: async () => {
-            const { nodes, edges } = get();
+            const isValid = get().validateWorkflow();
 
+            if (!isValid) {
+                set({
+                    simulationLogs: [{
+                        timestamp: new Date().toISOString(),
+                        level: 'error',
+                        message: 'Simulation aborted: Workflow contains invalid or disconnected nodes.'
+                    }]
+                });
+                return;
+            }
+
+            const { nodes, edges } = get();
             set({ isSimulating: true, simulationLogs: [] });
 
             try {

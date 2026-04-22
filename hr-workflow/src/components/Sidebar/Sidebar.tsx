@@ -1,7 +1,10 @@
 import React from 'react';
+import { useWorkflowStore } from '../../store/useWorkflowStore';
 
 export const Sidebar = () => {
-    // This sets the payload string so the canvas knows WHAT is being dropped
+    const nodes = useWorkflowStore((state) => state.nodes);
+
+    const hasStartNode = nodes.some((n) => n.type === 'startNode');
     const onDragStart = (event: React.DragEvent, nodeType: string) => {
         event.dataTransfer.setData('application/reactflow', nodeType);
         event.dataTransfer.effectAllowed = 'move';
@@ -12,6 +15,18 @@ export const Sidebar = () => {
             <h2 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wider">Node Palette</h2>
             <div className="space-y-3">
                 <div className="text-xs text-slate-500 mb-2">Drag to add:</div>
+
+                <div
+                    className={`p-3 rounded-xl border-2 text-sm font-bold flex items-center gap-3 transition-all ${hasStartNode
+                        ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 cursor-grab hover:shadow-md hover:scale-[1.02]'
+                        }`}
+                    onDragStart={(event) => !hasStartNode && onDragStart(event, 'startNode')}
+                    draggable={!hasStartNode}
+                >
+                    <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                    {hasStartNode ? 'Start Node (Active)' : 'Start Node'}
+                </div>
 
                 <div
                     className="p-3 border-2 border-blue-200 bg-blue-50 text-blue-700 rounded cursor-grab font-medium text-sm"
