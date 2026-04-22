@@ -178,6 +178,7 @@ export const useWorkflowStore = create<WorkflowState>()(
                 data: { title: `New ${type.replace('Node', '')}` }
             };
             set({ nodes: [...get().nodes, newNode] });
+            get().validateWorkflow();
         },
 
         deleteNode: (id) => {
@@ -187,6 +188,7 @@ export const useWorkflowStore = create<WorkflowState>()(
                 edges: get().edges.filter((edge) => edge.source !== id && edge.target !== id),
                 selectedNodeId: get().selectedNodeId === id ? null : get().selectedNodeId
             });
+            get().validateWorkflow();
         },
 
         setSelectedNodeId: (id) => {
@@ -209,6 +211,8 @@ export const useWorkflowStore = create<WorkflowState>()(
                 });
                 return;
             }
+
+            get().autoLayout();
 
             const { nodes, edges } = get();
             set({ isSimulating: true, simulationLogs: [] });
@@ -241,6 +245,7 @@ export const useWorkflowStore = create<WorkflowState>()(
                 });
             }
         },
+
         exportWorkflow: () => {
             const { nodes, edges } = get();
             const exportData = JSON.stringify({ nodes, edges }, null, 2);
