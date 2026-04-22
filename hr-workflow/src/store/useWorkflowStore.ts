@@ -2,13 +2,14 @@ import { create } from 'zustand';
 import {
     type Connection,
     type Edge,
-    type EdgeChange,
     type Node,
-    type NodeChange,
+    type OnNodesChange,
+    type OnEdgesChange,
+    type OnConnect,
     addEdge,
     applyNodeChanges,
     applyEdgeChanges
-} from 'reactflow';
+} from '@xyflow/react';
 import type { WorkflowNodeData } from '../types';
 
 // Define the shape of our store
@@ -17,13 +18,13 @@ interface WorkflowState {
     edges: Edge[];
     selectedNodeId: string | null;
 
-    // React Flow synchronization handlers
-    onNodesChange: (changes: NodeChange[]) => void;
-    onEdgesChange: (changes: EdgeChange[]) => void;
-    onConnect: (connection: Connection) => void;
+    // Use XYFlow's native handler types to satisfy the strict compiler
+    onNodesChange: OnNodesChange<Node<WorkflowNodeData>>;
+    onEdgesChange: OnEdgesChange;
+    onConnect: OnConnect;
 
     // Custom business logic
-    addNode: (type: string) => void;
+    addNode: (type: string, position: { x: number, y: number }) => void;
     updateNodeData: (id: string, data: Partial<WorkflowNodeData>) => void;
     deleteNode: (id: string) => void;
     setSelectedNodeId: (id: string | null) => void;
@@ -54,15 +55,14 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     },
 
     // 3. Custom Mutations
-    addNode: (type) => {
+    addNode: (type, position) => {
         const id = `${type}-${Date.now()}`;
         const newNode: Node<WorkflowNodeData> = {
             id,
             type,
-            position: { x: Math.random() * 200 + 100, y: Math.random() * 200 + 100 },
+            position,
             data: { title: `New ${type.replace('Node', '')}` }
         };
-
         set({ nodes: [...get().nodes, newNode] });
     },
 

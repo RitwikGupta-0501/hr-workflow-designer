@@ -1,5 +1,6 @@
 // Base structure every node must follow
 export interface BaseNodeData {
+    [key: string]: unknown;
     title: string;
 }
 
