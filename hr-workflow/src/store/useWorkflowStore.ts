@@ -33,7 +33,7 @@ interface WorkflowState {
     onNodesChange: OnNodesChange<Node<WorkflowNodeData>>;
     onEdgesChange: OnEdgesChange;
     onConnect: OnConnect;
-    addNode: (type: string, position: { x: number, y: number }) => void;
+    addNode: (type: string, position: { x: number, y: number }, templateData: Partial<WorkflowNodeData>) => void;
     updateNodeData: (id: string, data: Partial<WorkflowNodeData>) => void;
     deleteNode: (id: string) => void;
     setSelectedNodeId: (id: string | null) => void;
@@ -185,17 +185,21 @@ export const useWorkflowStore = create<WorkflowState>()(
             }
         },
 
-        addNode: (type, position) => {
+        addNode: (type, position, initialData) => {
             get().saveHistory();
             const id = `${type}-${Date.now()}`;
+
             const newNode: Node<WorkflowNodeData> = {
                 id,
                 type,
                 position,
-                data: { title: `New ${type.replace('Node', '')}` }
+                data: {
+                    title: `New ${type.replace('Node', '')}`,
+                    ...initialData
+                }
             };
+
             set({ nodes: [...get().nodes, newNode] });
-            get().validateWorkflow();
         },
 
         deleteNode: (id) => {

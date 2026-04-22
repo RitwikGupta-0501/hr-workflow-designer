@@ -3,6 +3,7 @@ import { ReactFlow, Background, Controls, MiniMap, ReactFlowProvider, useReactFl
 import '@xyflow/react/dist/style.css';
 import { useWorkflowStore } from '../../store/useWorkflowStore';
 import { StartNode, TaskNode, ApprovalNode, AutomatedNode, EndNode } from './CustomNodes';
+import type { WorkflowNodeData } from '../../types';
 
 const nodeTypes = {
     startNode: StartNode,
@@ -16,7 +17,10 @@ const nodeTypes = {
 const FlowRenderer = () => {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { screenToFlowPosition } = useReactFlow();
-    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode, setSelectedNodeId, selectedNodeId, saveHistory, undo, redo } = useWorkflowStore();
+    const {
+        nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode,
+        setSelectedNodeId, selectedNodeId, saveHistory, undo, redo
+    } = useWorkflowStore();
 
     const onDragOver = useCallback((event: React.DragEvent) => {
         event.preventDefault();
@@ -25,7 +29,6 @@ const FlowRenderer = () => {
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            // Check for Cmd (Mac) or Ctrl (Windows/Linux)
             if (event.metaKey || event.ctrlKey) {
                 if (event.key === 'z') {
                     if (event.shiftKey) {
@@ -52,13 +55,22 @@ const FlowRenderer = () => {
             const type = event.dataTransfer.getData('application/reactflow');
             if (!type) return;
 
-            // Calculate the exact drop position accounting for zoom and pan
             const position = screenToFlowPosition({
                 x: event.clientX,
                 y: event.clientY,
             });
 
-            addNode(type, position);
+            const templateDataStr = event.dataTransfer.getData('application/template-data');
+
+            // Type the parsed template data!
+            let templateData: Partial<WorkflowNodeData> = {};
+
+            if (templateDataStr) {
+                templateData = JSON.parse(templateDataStr);
+            }
+
+            // Pass it safely to the store
+            addNode(type, position, templateData);
         },
         [screenToFlowPosition, addNode]
     );
