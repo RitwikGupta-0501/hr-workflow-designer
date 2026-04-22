@@ -211,31 +211,49 @@ const EndFields = ({ node, updateData }: any) => (
 );
 
 export const NodeEditor = () => {
-    const { nodes, selectedNodeId, updateNodeData, setSelectedNodeId, deleteNode, saveNodeAsTemplate, invalidNodes } = useWorkflowStore();
+    const {
+        nodes, edges, selectedNodeId, selectedEdgeId,
+        updateNodeData, updateEdgeLabel,
+        setSelectedNodeId, setSelectedEdgeId,
+        deleteNode, deleteEdge,
+        saveNodeAsTemplate, invalidNodes
+    } = useWorkflowStore();
 
-    const [activeNode, setActiveNode] = useState<any>(null);
+    // Track a unified active item
+    const [activeItem, setActiveItem] = useState<{ type: 'node' | 'edge', data: any } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [templateName, setTemplateName] = useState('');
 
     useEffect(() => {
-        const selectedNode = nodes.find((n) => n.id === selectedNodeId);
-        if (selectedNode) {
-            setActiveNode(selectedNode);
+        if (selectedNodeId) {
+            const node = nodes.find((n) => n.id === selectedNodeId);
+            if (node) setActiveItem({ type: 'node', data: node });
+        } else if (selectedEdgeId) {
+            const edge = edges.find((e) => e.id === selectedEdgeId);
+            if (edge) setActiveItem({ type: 'edge', data: edge });
         }
-    }, [selectedNodeId, nodes]);
+    }, [selectedNodeId, selectedEdgeId, nodes, edges]);
 
-    const isOpen = !!selectedNodeId;
-    const nodeErrors = activeNode ? invalidNodes[activeNode.id] : null;
+    const isOpen = !!selectedNodeId || !!selectedEdgeId;
+    const nodeErrors = activeItem?.type === 'node' ? invalidNodes[activeItem.data.id] : null;
+
+    const handleClose = () => {
+        setSelectedNodeId(null);
+        setSelectedEdgeId(null);
+    };
 
     const handleSaveTemplateClick = () => {
-        if (!activeNode) return;
-        setTemplateName(`${activeNode.data.title} Template`);
+        if (activeItem?.type !== 'node') return;
+
+        setTemplateName(`${activeItem.data.data.title} Template`);
         setIsModalOpen(true);
     };
 
     const confirmSaveTemplate = () => {
+        if (activeItem?.type !== 'node') return;
+
         if (templateName.trim() !== "") {
-            saveNodeAsTemplate(activeNode.id, templateName.trim());
+            saveNodeAsTemplate(activeItem.data.id, templateName.trim());
             setIsModalOpen(false);
             setTemplateName('');
         }
@@ -249,67 +267,96 @@ export const NodeEditor = () => {
             >
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <h2 className="font-bold text-slate-700 truncate">
-                        {activeNode ? `Editing: ${activeNode.data.title} ` : 'Settings'}
+                        {activeItem?.type === 'node' ? `Editing: ${activeItem.data.data.title} ` : 'Edit Connection'}
                     </h2>
-                    <button
-                        onClick={() => setSelectedNodeId(null)}
-                        className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
-                    >✕</button>
+                    <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors">✕</button>
                 </div>
 
                 <div className="p-6 flex flex-col overflow-y-auto h-[calc(100%-60px)]">
 
-                    {nodeErrors && nodeErrors.length > 0 && (
-                        <div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl animate-fade-in">
-                            <div className="flex items-center gap-2 text-rose-700 font-bold text-sm mb-1">
-                                <span>⚠️</span> Validation Errors
+                    {/* NODE EDITING MODE */}
+                    {activeItem?.type === 'node' && (
+                        <>
+                            {nodeErrors && nodeErrors.length > 0 && (
+                                <div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl animate-fade-in">
+                                    <div className="flex items-center gap-2 text-rose-700 font-bold text-sm mb-1">
+                                        <span>⚠️</span> Validation Errors
+                                    </div>
+                                    <ul className="list-disc list-inside text-xs text-rose-600 space-y-1">
+                                        {nodeErrors.map((error, index) => (
+                                            <li key={index}>{error}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2 tracking-tight">
+                                    Node Title <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={activeItem.data.data.title || ''}
+                                    onChange={(e) => updateNodeData(activeItem.data.id, { title: e.target.value })}
+                                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
+                                />
+
+                                {activeItem.data.type === 'startNode' && <StartFields node={activeItem.data} updateData={updateNodeData} />}
+                                {activeItem.data.type === 'taskNode' && <TaskFields node={activeItem.data} updateData={updateNodeData} />}
+                                {activeItem.data.type === 'approvalNode' && <ApprovalFields node={activeItem.data} updateData={updateNodeData} />}
+                                {activeItem.data.type === 'automatedNode' && <AutomatedFields node={activeItem.data} updateData={updateNodeData} />}
+                                {activeItem.data.type === 'endNode' && <EndFields node={activeItem.data} updateData={updateNodeData} />}
                             </div>
-                            <ul className="list-disc list-inside text-xs text-rose-600 space-y-1">
-                                {nodeErrors.map((error, index) => (
-                                    <li key={index}>{error}</li>
-                                ))}
-                            </ul>
-                        </div>
+
+                            <div className="pt-8 mt-auto border-t border-slate-100 space-y-3">
+                                {/* Save Template & Delete Node Buttons */}
+                                <button
+                                    onClick={handleSaveTemplateClick}
+                                    className="w-full py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg font-semibold text-sm hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <span>💾</span> Save as Template
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        deleteNode(activeItem.data.id);
+                                        handleClose();
+                                    }}
+                                    className="w-full py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg font-semibold text-sm hover:bg-rose-100 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <span>🗑️</span> Delete Node
+                                </button>
+                            </div>
+                        </>
                     )}
 
-                    {activeNode && (
-                        <div>
+                    {/* EDGE EDITING MODE */}
+                    {activeItem?.type === 'edge' && (
+                        <div className="flex flex-col h-full">
                             <label className="block text-xs font-semibold text-slate-500 uppercase mb-2 tracking-tight">
-                                Node Title <span className="text-rose-500">*</span>
+                                Connection Label
                             </label>
                             <input
                                 type="text"
-                                value={activeNode.data.title || ''}
-                                onChange={(e) => updateNodeData(activeNode.id, { title: e.target.value })}
-                                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
+                                value={activeItem.data.label || ''}
+                                onChange={(e) => updateEdgeLabel(activeItem.data.id, e.target.value)}
+                                placeholder="e.g. Approved, Rejected"
+                                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
                             />
 
-                            {activeNode.type === 'startNode' && <StartFields node={activeNode} updateData={updateNodeData} />}
-                            {activeNode.type === 'taskNode' && <TaskFields node={activeNode} updateData={updateNodeData} />}
-                            {activeNode.type === 'approvalNode' && <ApprovalFields node={activeNode} updateData={updateNodeData} />}
-                            {activeNode.type === 'automatedNode' && <AutomatedFields node={activeNode} updateData={updateNodeData} />}
-                            {activeNode.type === 'endNode' && <EndFields node={activeNode} updateData={updateNodeData} />}
+                            <div className="pt-8 mt-auto border-t border-slate-100">
+                                <button
+                                    onClick={() => {
+                                        deleteEdge(activeItem.data.id);
+                                        handleClose();
+                                    }}
+                                    className="w-full py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg font-semibold text-sm hover:bg-rose-100 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <span>🗑️</span> Delete Connection
+                                </button>
+                            </div>
                         </div>
                     )}
-
-                    <div className="pt-8 mt-auto border-t border-slate-100 space-y-3">
-                        <button
-                            onClick={handleSaveTemplateClick}
-                            className="w-full py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg font-semibold text-sm hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <span>💾</span> Save as Template
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                deleteNode(activeNode.id);
-                                setSelectedNodeId(null);
-                            }}
-                            className="w-full py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg font-semibold text-sm hover:bg-rose-100 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <span>🗑️</span> Delete Node
-                        </button>
-                    </div>
                 </div>
             </aside>
 

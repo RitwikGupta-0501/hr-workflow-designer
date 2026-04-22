@@ -13,13 +13,12 @@ const nodeTypes = {
     endNode: EndNode,
 };
 
-// We extract the actual canvas logic into a child component so it can use the useReactFlow hook
 const FlowRenderer = () => {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { screenToFlowPosition } = useReactFlow();
     const {
         nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode,
-        setSelectedNodeId, selectedNodeId, saveHistory, undo, redo
+        setSelectedNodeId, selectedNodeId, saveHistory, undo, redo, setSelectedEdgeId, selectedEdgeId
     } = useWorkflowStore();
 
     const onDragOver = useCallback((event: React.DragEvent) => {
@@ -62,14 +61,12 @@ const FlowRenderer = () => {
 
             const templateDataStr = event.dataTransfer.getData('application/template-data');
 
-            // Type the parsed template data!
             let templateData: Partial<WorkflowNodeData> = {};
 
             if (templateDataStr) {
                 templateData = JSON.parse(templateDataStr);
             }
 
-            // Pass it safely to the store
             addNode(type, position, templateData);
         },
         [screenToFlowPosition, addNode]
@@ -86,8 +83,18 @@ const FlowRenderer = () => {
                 nodeTypes={nodeTypes}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
-                onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-                onPaneClick={() => setSelectedNodeId(null)}
+                onNodeClick={(_, node) => {
+                    setSelectedNodeId(node.id);
+                    setSelectedEdgeId(null);
+                }}
+                onEdgeClick={(_, edge) => {
+                    setSelectedEdgeId(edge.id);
+                    setSelectedNodeId(null);
+                }}
+                onPaneClick={() => {
+                    setSelectedNodeId(null);
+                    setSelectedEdgeId(null);
+                }}
                 onNodeDragStart={() => saveHistory()}
                 deleteKeyCode={['Backspace', 'Delete']}
                 onNodesDelete={(deletedNodes) => {
@@ -96,7 +103,12 @@ const FlowRenderer = () => {
                         setSelectedNodeId(null);
                     }
                 }}
-                onEdgesDelete={() => saveHistory()}
+                onEdgesDelete={(deletedEdges) => {
+                    saveHistory();
+                    if (deletedEdges.some(e => e.id === selectedEdgeId)) {
+                        setSelectedEdgeId(null);
+                    }
+                }}
                 fitView
             >
 

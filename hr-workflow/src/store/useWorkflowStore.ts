@@ -45,7 +45,11 @@ interface WorkflowState {
     workflowName: string;
     userTemplates: UserTemplate[];
     executionSummary: ExecutionSummary | null;
+    selectedEdgeId: string | null;
 
+    setSelectedEdgeId: (id: string | null) => void;
+    updateEdgeLabel: (id: string, label: string) => void;
+    deleteEdge: (id: string) => void;
     saveNodeAsTemplate: (nodeId: string, templateName: string) => void;
     deleteTemplate: (templateId: string) => void;
     onNodesChange: OnNodesChange<Node<WorkflowNodeData>>;
@@ -87,6 +91,29 @@ export const useWorkflowStore = create<WorkflowState>()(
         workflowName: 'Untitled Workflow',
         userTemplates: [],
         executionSummary: null,
+        selectedEdgeId: null,
+
+        setSelectedEdgeId: (id) => set({ selectedEdgeId: id }),
+
+        updateEdgeLabel: (id, label) => {
+            get().saveHistory();
+            set({
+                edges: get().edges.map((edge) =>
+                    edge.id === id ? { ...edge, label } : edge
+                )
+            });
+        },
+
+        deleteEdge: (id) => {
+            get().saveHistory();
+            set({
+                edges: get().edges.filter(e => e.id !== id),
+                selectedEdgeId: get().selectedEdgeId === id ? null : get().selectedEdgeId
+            });
+            if (Object.keys(get().invalidNodes).length > 0) {
+                get().validateWorkflow();
+            }
+        },
 
         saveNodeAsTemplate: (nodeId, templateName) => {
             const node = get().nodes.find(n => n.id === nodeId);
@@ -96,7 +123,6 @@ export const useWorkflowStore = create<WorkflowState>()(
                 id: `template-${Date.now()}`,
                 name: templateName,
                 type: node.type || 'taskNode',
-                // Copy the current data payload
                 data: { ...node.data }
             };
 
@@ -156,7 +182,6 @@ export const useWorkflowStore = create<WorkflowState>()(
             nodes.forEach(node => {
                 const nodeErrors: string[] = [];
 
-                // 1. Connection Checks
                 const hasIncoming = edges.some(e => e.target === node.id);
                 const hasOutgoing = edges.some(e => e.source === node.id);
 
@@ -166,7 +191,6 @@ export const useWorkflowStore = create<WorkflowState>()(
                     nodeErrors.push('Must be connected on both sides.');
                 }
 
-                // 2. Data Checks
                 if (node.type === 'taskNode') {
                     if (!node.data.assignee) nodeErrors.push('Assignee is required.');
                     if (!node.data.dueDate) nodeErrors.push('Due date is required.');
@@ -290,11 +314,9 @@ export const useWorkflowStore = create<WorkflowState>()(
                     throw new Error(data.error || 'Simulation failed');
                 }
 
-                // --- NEW SUMMARY LOGIC ---
                 const endNode = nodes.find(n => n.type === 'endNode');
                 let summary = null;
 
-                // Check if the end node exists AND the summary flag is true
                 if (endNode && endNode.data.summaryFlag) {
                     summary = {
                         totalLogs: data.executionLog.length,
@@ -358,44 +380,34 @@ export const useWorkflowStore = create<WorkflowState>()(
             }
         },
 
-        // ... existing store methods
+
 
         autoLayout: () => {
-            get().saveHistory(); // Save state so the user can 'Undo' the auto-layout!
+            get().saveHistory();
 
             const { nodes, edges } = get();
 
-            // 1. Initialize Dagre graph engine
             const dagreGraph = new dagre.graphlib.Graph();
             dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-            // Set the direction to Left-to-Right ('LR'). You can change to 'TB' (Top-Bottom) if you prefer.
             dagreGraph.setGraph({ rankdir: 'TB', ranksep: 100, nodesep: 80 });
 
-            // 2. We need to tell Dagre roughly how big your nodes are. 
-            // Your Tailwind w-48 is 192px wide. We'll use 200x100 for breathing room.
             const nodeWidth = 200;
             const nodeHeight = 100;
 
-            // 3. Feed the nodes to Dagre
             nodes.forEach((node) => {
                 dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
             });
 
-            // 4. Feed the connections to Dagre
             edges.forEach((edge) => {
                 dagreGraph.setEdge(edge.source, edge.target);
             });
 
-            // 5. Run the layout mathematics
             dagre.layout(dagreGraph);
 
-            // 6. Update our React Flow nodes with the calculated coordinates
             const layoutedNodes = nodes.map((node) => {
                 const nodeWithPosition = dagreGraph.node(node.id);
 
-                // Dagre calculates from the center, but React Flow positions from the top-left.
-                // We subtract half the width/height to center them perfectly.
                 return {
                     ...node,
                     position: {
@@ -405,7 +417,6 @@ export const useWorkflowStore = create<WorkflowState>()(
                 };
             });
 
-            // 7. Update the state
             set({ nodes: layoutedNodes });
         },
     }),
