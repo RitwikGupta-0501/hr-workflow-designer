@@ -1,5 +1,7 @@
 import { WorkflowCanvas } from './components/Canvas/WorkflowCanvas';
 import { Sidebar } from './components/Sidebar/Sidebar';
+import { NodeEditor } from './components/NodeEditor/NodeEditor';
+
 
 function App() {
   return (
@@ -8,6 +10,7 @@ function App() {
       <main className="flex-1 relative">
         <WorkflowCanvas />
       </main>
+      <NodeEditor />
     </div>
   );
 }

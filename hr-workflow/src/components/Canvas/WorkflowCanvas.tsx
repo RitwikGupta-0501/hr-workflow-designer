@@ -16,7 +16,7 @@ const nodeTypes = {
 const FlowRenderer = () => {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { screenToFlowPosition } = useReactFlow();
-    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useWorkflowStore();
+    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode, setSelectedNodeId, selectedNodeId } = useWorkflowStore();
 
     const onDragOver = useCallback((event: React.DragEvent) => {
         event.preventDefault();
@@ -51,8 +51,17 @@ const FlowRenderer = () => {
                 nodeTypes={nodeTypes}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
+                onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+                onPaneClick={() => setSelectedNodeId(null)}
+                deleteKeyCode={['Backspace', 'Delete']}
+                onNodesDelete={(deletedNodes) => {
+                    if (deletedNodes.some(n => n.id === selectedNodeId)) {
+                        setSelectedNodeId(null);
+                    }
+                }}
                 fitView
             >
+
                 <Background color="#cbd5e1" gap={20} />
                 <Controls />
                 <MiniMap />
