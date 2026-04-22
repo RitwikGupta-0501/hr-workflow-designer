@@ -8,6 +8,14 @@ export const Sidebar = () => {
     const [isOpen, setIsOpen] = useState(true);
     const [activeTab, setActiveTab] = useState<'palette' | 'templates'>('palette');
 
+    const userTemplates = useWorkflowStore((state) => state.userTemplates);
+    const deleteTemplate = useWorkflowStore((state) => state.deleteTemplate);
+
+    const handleDelete = (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        deleteTemplate(id);
+    };
+
     const onDragStart = (event: React.DragEvent, nodeType: string, templateData?: any) => {
         event.dataTransfer.setData('application/reactflow', nodeType);
 
@@ -104,30 +112,41 @@ export const Sidebar = () => {
                         </>
                     ) : (
                         <>
-                            {/* TEMPLATES TAB */}
-                            <div className="text-xs text-slate-500 mb-2 italic">Pre-configured blocks</div>
-
-                            <div
-                                className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 text-amber-800 rounded-xl cursor-grab hover:shadow-md hover:scale-[1.02] text-sm font-bold transition-all"
-                                onDragStart={(event) => onDragStart(event, 'approvalNode', { title: 'Director Sign-off', role: 'Director' })}
-                                draggable
-                            >
-                                <div className="flex items-center gap-2 mb-1">
-                                    <span>👑</span> Director Approval
-                                </div>
-                                <div className="text-[10px] font-normal text-amber-600">Requires Director role</div>
+                            <div className="text-xs text-slate-500 mb-2 font-semibold uppercase tracking-wider">
+                                My Saved Templates
                             </div>
 
-                            <div
-                                className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 text-purple-800 rounded-xl cursor-grab hover:shadow-md hover:scale-[1.02] text-sm font-bold transition-all"
-                                onDragStart={(event) => onDragStart(event, 'automatedNode', { title: 'Slack Notification', actionId: 'send_slack' })}
-                                draggable
-                            >
-                                <div className="flex items-center gap-2 mb-1">
-                                    <span>💬</span> Send Slack Msg
+                            {userTemplates.length === 0 ? (
+                                <div className="text-xs text-slate-400 p-4 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center">
+                                    No templates yet. Configure a node and click "Save as Template".
                                 </div>
-                                <div className="text-[10px] font-normal text-purple-600">Pre-configured automation</div>
-                            </div>
+                            ) : (
+                                userTemplates.map((template) => (
+                                    <div
+                                        key={template.id}
+                                        className="p-3 bg-white border-2 border-slate-200 text-slate-800 rounded-xl cursor-grab hover:shadow-md hover:border-indigo-400 text-sm font-bold transition-all relative group"
+                                        onDragStart={(event) => onDragStart(event, template.type, template.data)}
+                                        draggable
+                                    >
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                                            {template.name}
+                                        </div>
+                                        <div className="text-[10px] font-normal text-slate-500 truncate">
+                                            Type: {template.type.replace('Node', '')}
+                                        </div>
+
+                                        {/* Subtle delete button that appears on hover */}
+                                        <button
+                                            onClick={(e) => handleDelete(e, template.id)}
+                                            className="absolute top-2 right-2 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title="Delete template"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))
+                            )}
                         </>
                     )}
                 </div>

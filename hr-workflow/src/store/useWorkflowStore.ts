@@ -18,6 +18,13 @@ interface HistorySnapshot {
     edges: Edge[];
 }
 
+export interface UserTemplate {
+    id: string;
+    name: string;
+    type: string;
+    data: Partial<WorkflowNodeData>;
+}
+
 interface WorkflowState {
     nodes: Node<WorkflowNodeData>[];
     edges: Edge[];
@@ -28,8 +35,10 @@ interface WorkflowState {
     future: HistorySnapshot[];
     invalidNodes: Record<string, string[]>;
     workflowName: string;
+    userTemplates: UserTemplate[];
 
-
+    saveNodeAsTemplate: (nodeId: string, templateName: string) => void;
+    deleteTemplate: (templateId: string) => void;
     onNodesChange: OnNodesChange<Node<WorkflowNodeData>>;
     onEdgesChange: OnEdgesChange;
     onConnect: OnConnect;
@@ -67,6 +76,26 @@ export const useWorkflowStore = create<WorkflowState>()(
         isSimulating: false,
         simulationLogs: [],
         workflowName: 'Untitled Workflow',
+        userTemplates: [],
+
+        saveNodeAsTemplate: (nodeId, templateName) => {
+            const node = get().nodes.find(n => n.id === nodeId);
+            if (!node) return;
+
+            const newTemplate: UserTemplate = {
+                id: `template-${Date.now()}`,
+                name: templateName,
+                type: node.type || 'taskNode',
+                // Copy the current data payload
+                data: { ...node.data }
+            };
+
+            set({ userTemplates: [...get().userTemplates, newTemplate] });
+        },
+
+        deleteTemplate: (templateId) => {
+            set({ userTemplates: get().userTemplates.filter(t => t.id !== templateId) });
+        },
 
         setWorkflowName: (name: string) => {
             set({ workflowName: name });
