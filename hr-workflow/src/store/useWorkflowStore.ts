@@ -327,14 +327,17 @@ export const useWorkflowStore = create<WorkflowState>()(
                 const endNode = nodes.find(n => n.type === 'endNode');
                 let summary = null;
 
-                if (endNode && endNode.data.summaryFlag) {
-                    summary = {
-                        totalLogs: data.executionLog.length,
-                        tasks: nodes.filter(n => n.type === 'taskNode').length,
-                        approvals: nodes.filter(n => n.type === 'approvalNode').length,
-                        automations: nodes.filter(n => n.type === 'automatedNode').length,
-                        endMessage: endNode.data.endMessage || 'Workflow finished successfully.',
-                    };
+                if (endNode) {
+                    const endData = endNode.data as import('../types').EndNodeData;
+                    if (endData.summaryFlag) {
+                        summary = {
+                            totalLogs: data.executionLog.length,
+                            tasks: nodes.filter(n => n.type === 'taskNode').length,
+                            approvals: nodes.filter(n => n.type === 'approvalNode').length,
+                            automations: nodes.filter(n => n.type === 'automatedNode').length,
+                            endMessage: endData.endMessage || 'Workflow finished successfully.',
+                        };
+                    }
                 }
 
                 set({

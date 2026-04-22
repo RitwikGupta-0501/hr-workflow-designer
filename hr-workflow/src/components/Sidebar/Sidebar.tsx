@@ -17,7 +17,7 @@ export const Sidebar = () => {
         deleteTemplate(id);
     };
 
-    const onDragStart = (event: React.DragEvent, nodeType: string, templateData?: WorkflowNodeData) => {
+    const onDragStart = (event: React.DragEvent, nodeType: string, templateData?: Partial<WorkflowNodeData>) => {
         event.dataTransfer.setData('application/reactflow', nodeType);
 
         // Pass template data if we are dragging a template
