@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Architectural Overview and Documentation for the HR Workflow Designer">
+    <title>HR Workflow Architecture</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: rgba(255, 255, 255, 0.03);
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.5);
+            --secondary: #38bdf8;
+            --accent: #f43f5e;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.15), transparent 25%);
+            background-attachment: fixed;
+        }
+
+        header {
+            text-align: center;
+            padding: 6rem 2rem 4rem;
+            position: relative;
+        }
+
+        header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 6rem;
+        }
+
+        .section-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section-title::after {
+            content: '';
+            height: 1px;
+            flex: 1;
+            background: linear-gradient(90deg, var(--border-color), transparent);
+        }
+
+        /* Tech Stack Grid */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 5rem;
+        }
+
+        .tech-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tech-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .tech-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 0 20px var(--primary-glow);
+        }
+
+        .tech-card:hover::before {
+            opacity: 1;
+        }
+
+        .tech-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .version-badge {
+            font-family: monospace;
+            background: rgba(99, 102, 241, 0.1);
+            color: #a5b4fc;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .tech-card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Decisions List */
+        .decisions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            margin-bottom: 5rem;
+        }
+
+        .decision-item {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .decision-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .decision-header h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+
+        .decision-header .tag {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--secondary);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .decision-content {
+            border-left: 2px solid var(--border-color);
+            padding-left: 2rem;
+        }
+
+        .decision-content h4 {
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .decision-content p {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .decision-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* FAQ Section */
+        .faq-grid {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 5rem;
+        }
+
+        .faq-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: background 0.2s ease;
+            user-select: none;
+        }
+
+        .faq-question:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .faq-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .faq-item.active .faq-icon {
+            transform: rotate(180deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0, 1, 0, 1), padding 0.4s ease;
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-muted);
+            padding: 0 1.5rem;
+        }
+
+        .faq-item.active .faq-answer {
+            max-height: 1000px;
+            padding: 0 1.5rem 1.5rem 1.5rem;
+            transition: max-height 0.4s ease-in-out, padding 0.4s ease;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .decision-item {
+                grid-template-columns: 1fr;
+            }
+            .decision-content {
+                border-left: none;
+                border-top: 2px solid var(--border-color);
+                padding-left: 0;
+                padding-top: 1.5rem;
+            }
+            header h1 {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>HR Workflow Designer</h1>
+        <p>Architectural overview, technical stack decisions, and foundational concepts for the visual workflow orchestrator.</p>
+    </header>
+
+    <div class="container">
+        
+        <h2 class="section-title">Technology Stack</h2>
+        <div class="tech-grid">
+            <div class="tech-card">
+                <h3>React <span class="version-badge">^19.2.5</span></h3>
+                <p>Frontend framework. Used for fast HMR and highly optimized component rendering.</p>
+            </div>
+            <div class="tech-card">
+                <h3>Vite <span class="version-badge">^8.0.9</span></h3>
+                <p>Build tool and dev server. Provides instant server start and lightning-fast HMR.</p>
+            </div>
+            <div class="tech-card">
+                <h3>Zustand <span class="version-badge">^5.0.12</span></h3>
+                <p>State Management. A centralized, unopinionated, and highly performant state container.</p>
+            </div>
+            <div class="tech-card">
+                <h3>React Flow <span class="version-badge">^12.10.2</span></h3>
+                <p>Canvas Engine. Provides the robust interactive node-based UI mapping and edge connections.</p>
+            </div>
+            <div class="tech-card">
+                <h3>Dagre <span class="version-badge">^0.8.5</span></h3>
+                <p>Algorithmic Layout. Mathematical calculation engine for automatic non-overlapping node positioning.</p>
+            </div>
+            <div class="tech-card">
+                <h3>Tailwind CSS <span class="version-badge">^4.2.4</span></h3>
+                <p>Styling. Utility-first CSS framework for rapid and consistent UI styling across components.</p>
+            </div>
+            <div class="tech-card">
+                <h3>MSW <span class="version-badge">^2.13.4</span></h3>
+                <p>Network API Layer. Mock Service Worker intercepts requests to simulate a fully decoupled backend.</p>
+            </div>
+            <div class="tech-card">
+                <h3>TypeScript <span class="version-badge">~6.0.2</span></h3>
+                <p>Type System. Strict discriminated unions ensure payload integrity and robust development.</p>
+            </div>
+        </div>
+
+        <h2 class="section-title">Core Architectural Decisions</h2>
+        <div class="decisions-list">
+            
+            <div class="decision-item">
+                <div class="decision-header">
+                    <h3>State Management</h3>
+                    <span class="tag">Zustand vs. Context</span>
+                </div>
+                <div class="decision-content">
+                    <h4>How it works</h4>
+                    <p>The entire graph state (nodes, edges), validation results, history stack, and UI states are lifted into a single Zustand store.</p>
+                    <h4>Why we did it</h4>
+                    <p><strong>Predictability & Performance:</strong> It acts as a single source of truth and completely avoids the massive re-rendering overhead common with React Context when deeply nested components access state. This ensures the canvas, validation engine, and configuration sidebar remain perfectly synchronized.</p>
+                </div>
+            </div>
+
+            <div class="decision-item">
+                <div class="decision-header">
+                    <h3>History & Undo/Redo</h3>
+                    <span class="tag">Native Memento Pattern</span>
+                </div>
+                <div class="decision-content">
+                    <h4>How it works</h4>
+                    <p>The store contains `past` and `future` arrays. Before any state mutation, a complete snapshot of the nodes and edges is pushed to the `past` array natively.</p>
+                    <h4>Why we did it</h4>
+                    <p><strong>Lightweight Control:</strong> Avoids the bloat of relying on heavy third-party history libraries. It gives us fine-grained control over what constitutes an "undoable" action right at the state mutation level.</p>
+                </div>
+            </div>
+
+            <div class="decision-item">
+                <div class="decision-header">
+                    <h3>Workflow Validation</h3>
+                    <span class="tag">Reactive Real-Time Engine</span>
+                </div>
+                <div class="decision-content">
+                    <h4>How it works</h4>
+                    <p>The `validateWorkflow` function runs reactively whenever the graph changes. It checks for disconnected graphs, missing required data, and orphan nodes.</p>
+                    <h4>Why we did it</h4>
+                    <p><strong>Immediate Feedback:</strong> Users receive instant visual feedback (kinetic pulsing on nodes) if their workflow is invalid. Errors only clear the exact millisecond the root cause is fixed in the data model.</p>
+                </div>
+            </div>
+
+            <div class="decision-item">
+                <div class="decision-header">
+                    <h3>Node Configuration</h3>
+                    <span class="tag">Unified Inspector Panel</span>
+                </div>
+                <div class="decision-content">
+                    <h4>How it works</h4>
+                    <p>Rather than building separate, complex inline editors for each node type, all data mutations are routed through a single slide-out Inspector Panel.</p>
+                    <h4>Why we did it</h4>
+                    <p><strong>Professional UX:</strong> Keeps the canvas visual representation clean and uncluttered. It mimics professional IDEs providing a consistent place for users to configure properties and validations.</p>
+                </div>
+            </div>
+
+            <div class="decision-item">
+                <div class="decision-header">
+                    <h3>Backend Integration</h3>
+                    <span class="tag">Network-Level Simulation via MSW</span>
+                </div>
+                <div class="decision-content">
+                    <h4>How it works</h4>
+                    <p>MSW intercepts `POST /simulate` and `GET /automations` requests, processes the actual JSON payload, and returns mock execution logs.</p>
+                    <h4>Why we did it</h4>
+                    <p><strong>Zero-Friction Migration:</strong> Simulates a real backend without littering the frontend code with mock data logic. When a real backend is built, the frontend requires absolutely zero changes; we simply turn off the MSW worker.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <h2 class="section-title">Frequently Asked Questions</h2>
+        <div class="faq-grid">
+            
+            <div class="faq-item">
+                <div class="faq-question">
+                    Why aren't we using React Context for the canvas state?
+                    <svg class="faq-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <div class="faq-answer">
+                    <p style="padding-top: 1rem;">React Context causes significant re-rendering issues when deeply nested components (like hundreds of nodes on a canvas) listen to complex state changes. By using Zustand, we selectively subscribe to state slices, meaning an update to Node A does not cause Node B to re-render, keeping our canvas performant at 60 FPS.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    How is the auto-layout mathematically calculated?
+                    <svg class="faq-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <div class="faq-answer">
+                    <p style="padding-top: 1rem;">We utilize <strong>Dagre</strong>, a library for directed graph layout. Dagre processes the nodes and edges purely as data objects to calculate a non-overlapping, hierarchical tree structure. Once the coordinates are calculated, they are pushed to the React Flow node state to visually update the UI.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    How is Type Safety enforced for different node types?
+                    <svg class="faq-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <div class="faq-answer">
+                    <p style="padding-top: 1rem;">In our type definitions, <code>WorkflowNodeData</code> is established as a <strong>Discriminated Union</strong>. This means TypeScript strictly enforces that a "Task Node" must have an "assignee" field, while an "Approval Node" must have a "role" field. This eliminates a vast majority of runtime data shape errors.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">
+                    What is required to scale this to an Enterprise Production environment?
+                    <svg class="faq-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <div class="faq-answer">
+                    <p style="padding-top: 1rem;">Scaling requires replacing MSW with a real execution engine (like Temporal.io), adding database persistence (PostgreSQL/Redis) instead of localStorage, implementing Canvas Viewport Virtualization to handle workflows with thousands of nodes, and potentially adding CRDTs (like Yjs) for real-time multiplayer collaboration.</p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Simple FAQ accordion logic
+        document.querySelectorAll('.faq-question').forEach(button => {
+            button.addEventListener('click', () => {
+                const item = button.parentElement;
+                
+                // Close all others
+                document.querySelectorAll('.faq-item').forEach(otherItem => {
+                    if (otherItem !== item) {
+                        otherItem.classList.remove('active');
+                    }
+                });
+
+                // Toggle current
+                item.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>
